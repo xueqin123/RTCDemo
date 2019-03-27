@@ -1,12 +1,15 @@
 package com.rtcdemo;
 
 import android.app.Activity;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
-import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import cn.rongcloud.rtc.RongRTCEngine;
@@ -23,6 +26,8 @@ import cn.rongcloud.rtc.user.RongRTCLocalUser;
 import cn.rongcloud.rtc.user.RongRTCRemoteUser;
 import io.rong.imlib.RongIMClient;
 
+import static cn.rongcloud.rtc.core.voiceengine.BuildInfo.MANDATORY_PERMISSIONS;
+
 public class MainActivity extends Activity implements RongRTCEventsListener {
     private static final String TAG = "MainActivity";
     private RongRTCVideoView local;
@@ -35,16 +40,9 @@ public class MainActivity extends Activity implements RongRTCEventsListener {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        checkPermissions();
         setContentView(R.layout.main_activity_layout);
         initView();
-        Utils.getTokenNew(this, new Utils.TokenListener() {
-            @Override
-            public void onTokenSuccess(String token) {
-                Log.i(TAG, "onTokenSuccess token: " + token);
-                mToken = token;
-                connectIM(mToken);
-            }
-        });
     }
 
     private void initView() {
@@ -239,5 +237,28 @@ public class MainActivity extends Activity implements RongRTCEventsListener {
     @Override
     public void onExceptionalquit() {
 
+    }
+
+    private List<String> unGrantedPermissions;
+    private void checkPermissions() {
+        unGrantedPermissions = new ArrayList();
+        for (String permission : MANDATORY_PERMISSIONS) {
+            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+                unGrantedPermissions.add(permission);
+            }
+        }
+        if (unGrantedPermissions.size() == 0) {//已经获得了所有权限，开始加入聊天室
+            Utils.getTokenNew(this, new Utils.TokenListener() {
+                @Override
+                public void onTokenSuccess(String token) {
+                    Log.i(TAG, "onTokenSuccess token: " + token);
+                    mToken = token;
+                    connectIM(mToken);
+                }
+            });
+        } else {//部分权限未获得，重新请求获取权限
+            String[] array = new String[unGrantedPermissions.size()];
+            ActivityCompat.requestPermissions(this, unGrantedPermissions.toArray(array), 0);
+        }
     }
 }
