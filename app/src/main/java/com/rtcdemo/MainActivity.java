@@ -6,6 +6,8 @@ import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
@@ -28,7 +30,7 @@ import io.rong.imlib.RongIMClient;
 
 import static cn.rongcloud.rtc.core.voiceengine.BuildInfo.MANDATORY_PERMISSIONS;
 
-public class MainActivity extends Activity implements RongRTCEventsListener {
+public class MainActivity extends Activity implements RongRTCEventsListener, View.OnClickListener {
     private static final String TAG = "MainActivity";
     private RongRTCVideoView local;
     private LinearLayout remotes;
@@ -36,6 +38,7 @@ public class MainActivity extends Activity implements RongRTCEventsListener {
     private String mRoomId = "roomId04"; //自己可以随意修改
     private RongRTCRoom mRongRTCRoom;
     private RongRTCLocalUser mLocalUser;
+    private Button button;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,6 +51,8 @@ public class MainActivity extends Activity implements RongRTCEventsListener {
     private void initView() {
         local = (RongRTCVideoView) findViewById(R.id.local);
         remotes = (LinearLayout) findViewById(R.id.remotes);
+        button = (Button) findViewById(R.id.finish);
+        button.setOnClickListener(this);
     }
 
     private void connectIM(String token) {
@@ -60,6 +65,8 @@ public class MainActivity extends Activity implements RongRTCEventsListener {
                     protected void onUiSuccess(RongRTCRoom rongRTCRoom) {
                         mRongRTCRoom = rongRTCRoom;
                         mLocalUser = rongRTCRoom.getLocalUser();
+                        RongRTCCapture.getInstance().setRongRTCVideoView(local);
+                        RongRTCCapture.getInstance().startCameraCapture();
                         setEventListener();
                         addRemoteUsersView();
                         subscribeAll();
@@ -71,8 +78,7 @@ public class MainActivity extends Activity implements RongRTCEventsListener {
 
                     }
                 });
-                RongRTCCapture.getInstance().setRongRTCVideoView(local);
-                RongRTCCapture.getInstance().startCameraCapture();
+
 
             }
 
@@ -182,7 +188,7 @@ public class MainActivity extends Activity implements RongRTCEventsListener {
 
     private RongRTCVideoView getNewVideoView() {
         RongRTCVideoView videoView = RongRTCEngine.getInstance().createVideoView(this);
-        remotes.addView(videoView,new LinearLayout.LayoutParams(300,300));
+        remotes.addView(videoView, new LinearLayout.LayoutParams(300, 300));
         remotes.bringToFront();
         return videoView;
     }
@@ -191,8 +197,21 @@ public class MainActivity extends Activity implements RongRTCEventsListener {
     @Override
     public void onRemoteUserPublishResource(RongRTCRemoteUser rongRTCRemoteUser, List<RongRTCAVInputStream> list) {
         for (RongRTCAVInputStream inputStream : rongRTCRemoteUser.getRemoteAVStreams()) {
-            inputStream.setRongRTCVideoView(getNewVideoView());
+            if(inputStream.getMediaType() == MediaType.VIDEO){
+                inputStream.setRongRTCVideoView(getNewVideoView());
+            }
         }
+        rongRTCRemoteUser.subscribeAvStream(rongRTCRemoteUser.getRemoteAVStreams(), new RongRTCResultUICallBack() {
+            @Override
+            public void onUiSuccess() {
+                Toast.makeText(MainActivity.this, "订阅成功", Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onUiFailed(RTCErrorCode rtcErrorCode) {
+                Toast.makeText(MainActivity.this, "订阅失败", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     @Override
@@ -213,7 +232,7 @@ public class MainActivity extends Activity implements RongRTCEventsListener {
     @Override
     public void onUserLeft(RongRTCRemoteUser rongRTCRemoteUser) {
         for (RongRTCAVInputStream inputStream : rongRTCRemoteUser.getRemoteAVStreams()) {
-            if(inputStream.getMediaType() == MediaType.VIDEO){
+            if (inputStream.getMediaType() == MediaType.VIDEO) {
                 remotes.removeView(inputStream.getRongRTCVideoView());
             }
         }
@@ -240,6 +259,7 @@ public class MainActivity extends Activity implements RongRTCEventsListener {
     }
 
     private List<String> unGrantedPermissions;
+
     private void checkPermissions() {
         unGrantedPermissions = new ArrayList();
         for (String permission : MANDATORY_PERMISSIONS) {
@@ -260,5 +280,21 @@ public class MainActivity extends Activity implements RongRTCEventsListener {
             String[] array = new String[unGrantedPermissions.size()];
             ActivityCompat.requestPermissions(this, unGrantedPermissions.toArray(array), 0);
         }
+    }
+
+    @Override
+    public void onClick(View v) {
+        RongRTCEngine.getInstance().quitRoom(mRongRTCRoom.getRoomId(), new RongRTCResultUICallBack() {
+            @Override
+            public void onUiSuccess() {
+                Toast.makeText(MainActivity.this, "离开房间成功", Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onUiFailed(RTCErrorCode rtcErrorCode) {
+                Toast.makeText(MainActivity.this, "离开房间失败", Toast.LENGTH_SHORT).show();
+            }
+        });
+        finish();
     }
 }

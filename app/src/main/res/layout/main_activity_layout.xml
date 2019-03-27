@@ -13,4 +13,10 @@
         android:layout_width="match_parent"
         android:layout_height="300px">
     </LinearLayout>
+    <Button
+        android:layout_gravity="bottom"
+        android:text="finish"
+        android:id="@+id/finish"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
 </FrameLayout>
