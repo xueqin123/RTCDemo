@@ -17,9 +17,15 @@ android {
         }
     }
 
+    sourceSets.main {
+        jniLibs.srcDir 'libs'
+        jni.srcDirs = []
+    }
+
+
 }
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation project(':RongRTCLib')
+    implementation project(':IMLib')
 }

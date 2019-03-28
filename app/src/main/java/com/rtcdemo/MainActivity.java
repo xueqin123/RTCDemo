@@ -65,12 +65,12 @@ public class MainActivity extends Activity implements RongRTCEventsListener, Vie
                     protected void onUiSuccess(RongRTCRoom rongRTCRoom) {
                         mRongRTCRoom = rongRTCRoom;
                         mLocalUser = rongRTCRoom.getLocalUser();
-                        RongRTCCapture.getInstance().setRongRTCVideoView(local);
-                        RongRTCCapture.getInstance().startCameraCapture();
-                        setEventListener();
+                        RongRTCCapture.getInstance().setRongRTCVideoView(local); //设置本地预览视图
+                        RongRTCCapture.getInstance().startCameraCapture();       //开始采集数据
+                        setEventListener();                                      //设置监听
                         addRemoteUsersView();
-                        subscribeAll();
-                        publishDefaultStream();
+                        subscribeAll();                                          //订阅资源
+                        publishDefaultStream();                                  //发布资源
                     }
 
                     @Override
