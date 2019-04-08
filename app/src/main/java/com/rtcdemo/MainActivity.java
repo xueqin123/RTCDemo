@@ -1,40 +1,33 @@
 package com.rtcdemo;
 
 import android.app.Activity;
-import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
-import java.util.ArrayList;
 import java.util.List;
 
+import cn.rongcloud.rtc.RTCErrorCode;
 import cn.rongcloud.rtc.RongRTCEngine;
+import cn.rongcloud.rtc.callback.JoinRoomUICallBack;
+import cn.rongcloud.rtc.callback.RongRTCResultUICallBack;
 import cn.rongcloud.rtc.engine.view.RongRTCVideoView;
 import cn.rongcloud.rtc.events.RongRTCEventsListener;
-import cn.rongcloud.rtc.media.http.RTCErrorCode;
-import cn.rongcloud.rtc.proxy.JoinRoomUICallBack;
-import cn.rongcloud.rtc.proxy.RongRTCResultUICallBack;
 import cn.rongcloud.rtc.room.RongRTCRoom;
 import cn.rongcloud.rtc.stream.MediaType;
 import cn.rongcloud.rtc.stream.local.RongRTCCapture;
 import cn.rongcloud.rtc.stream.remote.RongRTCAVInputStream;
 import cn.rongcloud.rtc.user.RongRTCLocalUser;
 import cn.rongcloud.rtc.user.RongRTCRemoteUser;
-import io.rong.imlib.RongIMClient;
-
-import static cn.rongcloud.rtc.core.voiceengine.BuildInfo.MANDATORY_PERMISSIONS;
+import io.rong.imlib.model.Message;
 
 public class MainActivity extends Activity implements RongRTCEventsListener, View.OnClickListener {
     private static final String TAG = "MainActivity";
     private RongRTCVideoView local;
     private LinearLayout remotes;
-    private String mToken = "";         //用户token
+    private String mToken = MyApp.token1;         //用户token 不通的自己修改
     private String mRoomId = "roomId04"; //自己可以随意修改
     private RongRTCRoom mRongRTCRoom;
     private RongRTCLocalUser mLocalUser;
@@ -43,9 +36,10 @@ public class MainActivity extends Activity implements RongRTCEventsListener, Vie
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        checkPermissions();
         setContentView(R.layout.main_activity_layout);
         initView();
+        getActionBar().setTitle("房间号: " + mRoomId);
+        joinRoom();
     }
 
     private void initView() {
@@ -55,46 +49,31 @@ public class MainActivity extends Activity implements RongRTCEventsListener, Vie
         button.setOnClickListener(this);
     }
 
-    private void connectIM(String token) {
-        RongIMClient.connect(token, new RongIMClient.ConnectCallback() {
+    /**
+     * 加入房间
+     */
+    private void joinRoom() {
+        RongRTCEngine.getInstance().joinRoom(mRoomId, new JoinRoomUICallBack() {
             @Override
-            public void onSuccess(String s) {
-                Toast.makeText(MainActivity.this, "连接服务器成功", Toast.LENGTH_SHORT).show();
-                RongRTCEngine.getInstance().joinRoom(mRoomId, new JoinRoomUICallBack() {
-                    @Override
-                    protected void onUiSuccess(RongRTCRoom rongRTCRoom) {
-                        mRongRTCRoom = rongRTCRoom;
-                        mLocalUser = rongRTCRoom.getLocalUser();
-                        RongRTCCapture.getInstance().setRongRTCVideoView(local); //设置本地预览视图
-                        RongRTCCapture.getInstance().startCameraCapture();       //开始采集数据
-                        setEventListener();                                      //设置监听
-                        addRemoteUsersView();
-                        subscribeAll();                                          //订阅资源
-                        publishDefaultStream();                                  //发布资源
-                    }
-
-                    @Override
-                    protected void onUiFailed(RTCErrorCode rtcErrorCode) {
-
-                    }
-                });
-
-
+            protected void onUiSuccess(RongRTCRoom rongRTCRoom) {
+                Toast.makeText(MainActivity.this, "加入房间成功", Toast.LENGTH_SHORT).show();
+                mRongRTCRoom = rongRTCRoom;
+                mLocalUser = rongRTCRoom.getLocalUser();
+                RongRTCCapture.getInstance().setRongRTCVideoView(local); //设置本地预览视图
+                RongRTCCapture.getInstance().startCameraCapture();       //开始采集数据
+                setEventListener();                                      //设置监听
+                addRemoteUsersView();
+                subscribeAll();                                          //订阅资源
+                publishDefaultStream();                                  //发布资源
             }
 
             @Override
-            public void onError(RongIMClient.ErrorCode errorCode) {
-                Toast.makeText(MainActivity.this, "连接服务器失败！", Toast.LENGTH_SHORT).show();
-
+            protected void onUiFailed(RTCErrorCode rtcErrorCode) {
+                Toast.makeText(MainActivity.this, "加入房间失败 rtcErrorCode：" + rtcErrorCode, Toast.LENGTH_SHORT).show();
             }
-
-            @Override
-            public void onTokenIncorrect() {
-                Toast.makeText(MainActivity.this, "token 非法！", Toast.LENGTH_SHORT).show();
-            }
-
         });
     }
+
 
     /**
      * 注册监听
@@ -197,7 +176,7 @@ public class MainActivity extends Activity implements RongRTCEventsListener, Vie
     @Override
     public void onRemoteUserPublishResource(RongRTCRemoteUser rongRTCRemoteUser, List<RongRTCAVInputStream> list) {
         for (RongRTCAVInputStream inputStream : rongRTCRemoteUser.getRemoteAVStreams()) {
-            if(inputStream.getMediaType() == MediaType.VIDEO){
+            if (inputStream.getMediaType() == MediaType.VIDEO) {
                 inputStream.setRongRTCVideoView(getNewVideoView());
             }
         }
@@ -215,7 +194,12 @@ public class MainActivity extends Activity implements RongRTCEventsListener, Vie
     }
 
     @Override
-    public void onRemoteUserModifyResource(RongRTCRemoteUser rongRTCRemoteUser, List<RongRTCAVInputStream> list) {
+    public void onRemoteUserAudioStreamMute(RongRTCRemoteUser rongRTCRemoteUser, RongRTCAVInputStream rongRTCAVInputStream, boolean b) {
+
+    }
+
+    @Override
+    public void onRemoteUserVideoStreamEnabled(RongRTCRemoteUser rongRTCRemoteUser, RongRTCAVInputStream rongRTCAVInputStream, boolean b) {
 
     }
 
@@ -244,7 +228,7 @@ public class MainActivity extends Activity implements RongRTCEventsListener, Vie
     }
 
     @Override
-    public void onTrackAdd(String s, String s1) {
+    public void onVideoTrackAdd(String s, String s1) {
 
     }
 
@@ -254,32 +238,13 @@ public class MainActivity extends Activity implements RongRTCEventsListener, Vie
     }
 
     @Override
-    public void onExceptionalquit() {
+    public void onLeaveRoom() {
 
     }
 
-    private List<String> unGrantedPermissions;
+    @Override
+    public void onReceiveMessage(Message message) {
 
-    private void checkPermissions() {
-        unGrantedPermissions = new ArrayList();
-        for (String permission : MANDATORY_PERMISSIONS) {
-            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
-                unGrantedPermissions.add(permission);
-            }
-        }
-        if (unGrantedPermissions.size() == 0) {//已经获得了所有权限，开始加入聊天室
-            Utils.getTokenNew(this, new Utils.TokenListener() {
-                @Override
-                public void onTokenSuccess(String token) {
-                    Log.i(TAG, "onTokenSuccess token: " + token);
-                    mToken = token;
-                    connectIM(mToken);
-                }
-            });
-        } else {//部分权限未获得，重新请求获取权限
-            String[] array = new String[unGrantedPermissions.size()];
-            ActivityCompat.requestPermissions(this, unGrantedPermissions.toArray(array), 0);
-        }
     }
 
     @Override
